@@ -1,0 +1,132 @@
+%\documentclass[12pt, a4paper, parskip=half, listof=totoc, bibliography = totoc]{scrartcl}
+\documentclass[a4paper, 11pt, listof=totoc, bibliography=totoc]{scrartcl}
+
+\usepackage[english]{babel} 
+\usepackage[T1]{fontenc} %latex Ausgabefont
+\usepackage[utf8]{inputenc} %Eingabecodierung
+%\usepackage{lmodern}
+
+% bibliography
+\usepackage[pdfborderstyle={/S/U/W 0}]{hyperref}
+\usepackage[hyperref = true, backend=biber, style=numeric, sorting = none]{biblatex}
+\addbibresource{bibliography.bib}
+%\addbibresource{bibliography_related.bib}
+\AtEveryBibitem{\clearfield{note}}
+\AtEveryBibitem{\clearfield{timestamp}}
+\AtEveryBibitem{\clearfield{urldate}}
+\AtEveryBibitem{\clearfield{doi}}
+\AtEveryBibitem{\clearfield{isbn}}
+\AtEveryBibitem{\clearfield{series}}
+\AtEveryBibitem{\clearfield{volume}}
+\AtEveryBibitem{\clearfield{number}}
+\AtEveryBibitem{\clearfield{pages}}
+\AtEveryBibitem{\clearfield{issue}}
+\AtEveryBibitem{\clearfield{publisher}}
+\DeclareSourcemap{
+  \maps[datatype=bibtex, overwrite]{
+    \map{
+%      \step[fieldset=language, null]
+      \step[fieldset=urldate, null]
+    }
+  }
+}
+%---Packages---
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[format = hang, figurename = {Figure}, tablename = {Table}, font = small, labelfont= it, position = below]{caption}
+\usepackage[format = hang, indention = 0.0cm]{subcaption}
+\usepackage{url}
+\usepackage{tabularx}
+\usepackage{textcomp}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{wrapfig}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{setspace}
+\usepackage{csquotes}
+\usepackage{appendix}
+\usepackage{multicol}
+
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+\LARGE
+\textbf{Master Thesis Report} \\
+\vspace{.5cm}
+
+\large
+Master Autonomous Systems \\
+Bonn-Rhein-Sieg University of Applied Sciences\\
+\vspace{1cm}
+
+\vspace{-0.75\baselineskip}\rule{\linewidth}{1.5pt}
+\LARGE\textbf{Deep Learning for Recognition of Daily-Living Actions} \\
+\vspace{-0.5\baselineskip}\rule{\linewidth}{1.5pt}
+
+\vspace{1cm}
+
+\normalsize
+\textit{Author:}\\
+Maximilian Schöbel\\
+Mat. Nr. 9027059
+\bigskip
+
+\textit{Advisors:}\\
+Prof. Dr. Erwin Prassler\\
+Prof. Dr. Paul G. Plöger\\
+\bigskip
+
+October 1st, 2017
+
+\vfill
+
+\textbf{Abstract}
+\end{center}
+\small
+
+TODO
+
+\newpage
+
+%\thispagestyle{empty}
+%\hfill
+%
+%\newpage
+
+\thispagestyle{empty}
+\footnotesize
+\tableofcontents
+\normalsize
+
+\newpage
+
+%\section*{Statement of Originality}
+%
+%This is to certify that the content of this report is my own work and that all sources have been acknowledged.
+%
+%
+%Date:
+%
+%
+%Signature: 
+%\newpage
+%\hfill
+%\newpage
+
+\include{01_introduction_relatedwork}
+\include{02_training_deep_networks}
+\include{03_datasets}
+\include{04_approach}
+\include{05_eval_conclusion}
+
+\begin{appendix}
+\include{Appendix_charades_classes}
+\include{Appendix_MAP}
+\end{appendix}
+
+\newpage
+
+%\printbibliography
+
+\end{document}
