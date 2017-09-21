@@ -281,10 +281,10 @@ spatially crop consecutive $112 \times 112$ pixel wide regions.
 Training on the Charades does not influence the batch-size, which is therefore kept at 40 input clips per batch.
 
 \subsubsection{3D Temporal Order Verification}
-Since obtaining the labels \textit{correct temporal order} and \textit{incorrect temporal order} is practically free (see \ref{subsec:tov}), \textit{temporal order verification} can be seen as an unsupervised pre-training method.
+Since obtaining the labels \textit{correct temporal order} and \textit{incorrect temporal order} requires no manual data labelling (see \ref{subsec:tov}), \textit{temporal order verification} can be seen as an unsupervised pre-training method.
 Therefore also a large amount of unlabelled data can be used in the pre-training process, as long it contains videos of (preferably human) motion.
 
-Promising candidate datasets are ActivityNet, because it contains a bib number of weakly annotated and non-localised human activities as well as Kinetics, which provides a big number of temporally localized actions.
+Promising candidate datasets are ActivityNet, because it contains a big number of weakly annotated and non-localised human activities as well as Kinetics, which provides a big number of temporally localized actions.
 These datasets however are only distributed via YouTube, i.e. each video needs to be downloaded individually.
 At the time of this writing about half of the training-set of Kinetics could be obtained.
 To provide a closed basis for evaluation of our approach, experiments were limited to sampling \textit{temporal order verification} tuples from the source datasets themselves, i.e. UCF-101 and Charades.
@@ -293,4 +293,9 @@ Successful pre-training with \textit{temporal order verification} requires provi
 This means in practise for our \textit{C3D} model, that a sampled input clip needs to contain a certain amount of motion, in order to be beneficial for pre-training.
 A video clip with a small magnitude of motion looks nearly the same, when permuted.
 
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{img_approach/tov_sampling}
+    \caption{<+captiontext+>}
+    \label{fig:<+label+>}
+\end{figure}<++>
