@@ -1,28 +1,29 @@
 \section{Experimental Setup}
+The main question this work aims to answer is: can pre-training with temporal order verification improve action recognition recognition performance from raw RGB inputs without explicit calculation of optical flow in a single stream 3D convolutional neural network.
+Specifically we try to develop a temporal order verification pre-training method for 3D CNNs, similar to the original approach in \cite{misra_shuffle_2016}.
+This section describes the overall details of the implementation of the \textit{C3D} model \cite{tran_learning_2015}.
 
-Main question to answer, can pre-training on temporal order verification aid action recognition from raw RGB inputs without explicit calculation of optical flow.
-
-Processing video data yields difficulties not present in processing image data.
-
-A single input is higher dimensional (here by a factor of 16).
-
-Input sizes are bigger, therefore only smaller batch sizes possible.
-
-Dataset sizes are too big for fitting into main memory of most common computers.
-
-To distribute video, they are encoded.
-To access individual frames, they need to be decoded which increases data sizes further.
-
-Because of memory limitations, creation of a single input batch requires decoding of the involved videos.
-Cannot be kept in RAM, so need to be decoded for each new input batch.
-
-Therefore special input pipeline necessary.
 
 \subsection{Hardware Setup}
+\label{sec:hardware}
+We perform experiments on a single PC with two GPUs.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+Processor & Intel Core i7 950 with 3.07 Ghz clock speed \\
+Cores / Threads & 4 / 8 (Hyperthreading) \\
+Main memory & 12 Gb DDR3 RAM with 1067Mhz\\
+Mass storage & 1 Tb (HDD) \\
+GPU & $2\times$ Nvidia GeForce GTX 1070 \\
+GPU Memory & $2\times$ 8Gb\\
+\end{tabularx}
+\caption{Overview hardware setup}
+\label{tab:hardware-setup}
+\end{table}
 
 
 \subsection{Model Architecture}
-
 Our implementation of the \textit{C3D} model follows the architectural design of the original \textit{C3D} network, as described in \cite{tran_learning_2015} and in the published Caffe implementation (see \mbox{\url{https://github.com/facebook/C3D}}).
 We implemented our model in Python using Google's deep learning framework \textit{Tensorflow} \cite{abadi_tensorflow:_2016}.
 The \textit{C3D} network contains eight 3D convolutional layers, with max-pooling layers after the first, second, fourth, sixth and eighth layer.
@@ -37,8 +38,8 @@ These are then flattened into a one-dimensional vector to be further processed b
     \label{fig:c3d_architecture}
 \end{figure}
 
-\subsubsection{Architectural Details}
 
+\subsubsection{Architectural Details}
 According to the experiments conducted by \textcite{tran_learning_2015}, 3D convolutional kernels of size $3 \times 3 \times 3$ perform best in the \textit{C3D} model.
 We therefore follow this design decision in our implementation as well.
 The network processes inputs of spatial dimension $112 \times 112$ pixels and temporal length of $16$ frames in $3$ RGB channels.
@@ -106,17 +107,19 @@ We keep the architecture unchanged in order to compare our results, more precise
     \label{fig:parameters_plot}
 \end{figure}
 
+
 \subsubsection{Regularization Methods}
-Dropout
+As around half of the model parameters are located in the last fully-connected layers, these are particularly prone to overfitting.
+We therefore follow the original implementation of the \textit{C3D} model and incorporate Dropout\cite{srivastava_dropout:_2014} with a dropout rate of $0.5$ in those last two layers. 
+Dropout has not been used in the convolutional layer, since the number of parameters in these layers is significantly smaller.
+In order to provide regularization for the other parameters as well we incorporate L2 regularization \cite{ng_feature_2004}.
+Batch Normalization \cite{ioffe_batch_2015-2} has been shown to be non-trivial to implement in a multi-GPU setup and incorporating it would have exceeded to scope of this work.
+The original implementation of the \textit{C3D} model did not use it, \textcite{carreira_quo_2017} however implemented it a multi-GPU setup to compare their own approach with \textit{C3D}.
 
-L2 Regularization
+The main data-augmentation technique used in our experiments is random cropping of inputs (see section \ref{subsec:inputsampling}).
 
-No Batch Normalization.
-
-Data augmentation (see \dots)
 
 \subsection{Input Pipeline}
-
 A single network training step in our multi-GPU setup, i.e. processing an input batch and updating the model parameters as described in section \ref{sec:multi_gpu}, takes longer than preparing a single input batch.
 
 This is due to the following reasons:
@@ -159,11 +162,8 @@ The currently enqueued number of batches thereby provides an accurate measure of
 Only in this case does the training process fully benefit from a multi-GPU setup.
 
 
-\subsection{Multi-GPU Stochastic Gradient Descent}
+\subsection{Multi-GPU Gradient Descent}
 \label{sec:multi_gpu}
-
-Stochastic gradient descent.
-
 Incorporating multiple GPUs for parallel training of a deep neural network is not a trivial task and there are different ways to do so.
 Parallelising network training with multiple GPUs can be divided into the following main approaches:
 \begin{enumerate}
@@ -174,6 +174,7 @@ Parallelising network training with multiple GPUs can be divided into the follow
         \item Synchronous model updates
     \end{enumerate}
 \end{enumerate}
+
 
 \subsubsection{Model Parallelism}
 Model parallelism describes dividing the to be trained network model into multiple parts and calculating each of these parts on a separate device.
@@ -201,6 +202,7 @@ Figure \ref{fig:model_parallelism} illustrates the above discussed alternatives 
     \caption{Different configurations to parallelize a single neural network model across multiple GPUs \cite{geron_hands-machine_2017}}
     \label{fig:model_parallelism}
 \end{figure}
+
 
 \subsubsection{Data Parallelism}
 Another way to use multiple GPUs for network training is to split the input batch rather than the network model, and process these sub-batches by replicated network models across multiple GPUs in parallel.
@@ -235,67 +237,128 @@ Benchmarking experiments conducted by Google Brain \cite{chen_revisiting_2016} i
 Since our \textit{C3D} model contains locally connected convolutional layers as well as large fully-connected layers, it is difficult to split, i.e. to incorporate model parallelism for training.
 Additionally, video-inputs are naturally bigger than images.
 Since the amount of available memory on the GPUs limits the size of the input batches, training with data-parallelism is tempting.
-We therefore decide to perform data parallel stochastic gradient descent.
+We therefore decide to perform data parallel mini-batch gradient descent.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{img_approach/gradient_averaging.eps}
-    \caption{Diagram of a single weight update step during data parallel synchronous stochastic gradient descent.}
+    \caption{Diagram of a single weight update step during data parallel synchronous gradient descent.}
     \label{fig:gradient_averaging}
 \end{figure}
 
 
 \subsection{Input Sampling}
-Our \textit{C3D} model processes input clips with a length of $16$ frames per training step, yet most source videos provide more frames, i.e. have a longer temporal duration.
+\label{subsec:inputsampling}
+Our \textit{C3D} model trains on input clips with a length of $16$ frames per step, yet most source videos provide more frames, i.e. have a longer temporal duration.
 A sampling strategy to provide the network with properly sized inputs ($112 \times 112 \times 16$ pixels) is therefore needed.
-This primarily includes temporal cropping, that is selecting a $16$ frame long sub-clip from the full temporal evolution of the video.
-We additionally incorporate spatial cropping: Source videos are initially rescaled to a larger spatial resolution and frames with the necessary width and height are then cropped out to produce network inputs.
+This primarily includes temporal cropping, that is selecting a $16$ frame long sub-clip from the full temporal extend of the video.
+We additionally incorporate spatial cropping: Source videos are initially rescaled to a larger spatial resolution and frames with the necessary width and height are cropped out to produce properly sized network inputs.
+
 
 \subsubsection{UCF-101 Input-Clips}
-All source videos in the UCF-101 dataset are provided in a fixed resolution of $320 \times 240$ pixels (width $\times$ height) with an average length of $7.21s$ \cite{soomro_ucf101:_2012}.
-Video in the training- as well as test-set of UCF-101 are annotated with a single action label.
+Videos in the UCF-101 dataset are provided in a fixed resolution of $320 \times 240$ pixels (width $\times$ height) with an average length of $7.21s$ \cite{soomro_ucf101:_2012}.
+Each video, in the training- as well as in the test-set, are annotated with a single action label per video.
 During training we iterate over the list of training videos and sample one input clip for each of those training-videos.
 The number of finished training epochs therefore corresponds to the overall number of processed input-clips per source video.
 
-To reduce pre-processing time per training step, only a $16$ frame long time-interval is decoded from the source training video.
-For UCF-101 training, this interval is randomly sampled from the complete training video, since it only contains one single action.
-The resulting $16$ frames are then rescaled to a fixed spatial resolution of $160 \times 120$ pixels.
-The final network input is then cropped out by randomly selecting a $112 \times 112$ pixels wide region in the first frame and cropping the 15 following frames accordingly.
+To reduce pre-processing time per training step, only a $16$ frame long time-interval is decoded from the source training video per sample.
+For training on UCF-101, this interval is randomly sampled from the complete training video, since it only contains one single action.
+The resulting $16$ frames are then rescaled to a fixed spatial resolution of $160 \times 120$ pixels, i.e. the spatial resolution is reduced by a factor of $2$.
+The final network input is then cropped out by randomly selecting a $112 \times 112$ pixel wide region in the first frame and cropping the 15 following frames accordingly.
 
-Following this procedure a multitude of network inputs can be sampled from a single source video.
+Following this procedure a multitude of different network inputs can be generated from a single source video.
 We use a batch size of $40$ per training step, which results in $20$ clips per GPU during training.
 This was found to be the biggest possible number of inputs to not exceed memory limitations of the available GPUs.
 
 \subsubsection{Charades Input-Clips}
-The source videos in the Charades dataset are provided in multiple resolutions.
+The videos in the Charades dataset are provided in multiple different resolutions.
 To reduce the download time and dataset size, the $480p$-version of the dataset was downloaded, which contains videos with a maximal height of $480$ pixels.
-In contrast to UCF-101 a single source video is annotated with multiple action instances, which can possibly overlap.
-To fit training on the Charades dataset in our implemented pre-processing pipeline, we treat each annotated action instance as a single source video, from which input-clips can be sampled.
+In contrast to UCF-101 a single source video is annotated with multiple action instances, which possibly can overlap (see section \ref{subsec:charadeslabelling}).
+To incorporate training on the Charades dataset in our implemented pre-processing pipeline, we treat each annotated action instance as a uniquely labelled video, from which input-clips can be sampled.
 
-During training on the Charades dataset we iterate over the list of temporally localized action instances and again sample one network input-clip per instance.
+During training on the Charades dataset we iterate over the list of temporally localized action instances and sample one input-clip per instance and epoch.
 To reduce pre-processing time, only a $16$ frame long interval is decoded from each action instance in the training set.
 Analogously to the input sampling procedure on UCF-101 this interval is selected randomly.
-Since the videos have different spatial resolutions, we rescale the shorter side of previously sampled interval to $120$ pixels and 
+Since the videos have different spatial resolutions, we rescale the shorter side of the previously sampled interval to $120$ pixels and 
 spatially crop consecutive $112 \times 112$ pixel wide regions.
 
-Training on the Charades does not influence the batch-size, which is therefore kept at 40 input clips per batch.
+The batch size of 40 input-clips per step, i.e. 20 inputs per GPU is left unchanged for training on the Charades dataset.
 
 \subsubsection{3D Temporal Order Verification}
 Since obtaining the labels \textit{correct temporal order} and \textit{incorrect temporal order} requires no manual data labelling (see \ref{subsec:tov}), \textit{temporal order verification} can be seen as an unsupervised pre-training method.
 Therefore also a large amount of unlabelled data can be used in the pre-training process, as long it contains videos of (preferably human) motion.
 
-Promising candidate datasets are ActivityNet, because it contains a big number of weakly annotated and non-localised human activities as well as Kinetics, which provides a big number of temporally localized actions.
+Promising candidate datasets are ActivityNet, because it contains a big number human actions, which unfortunately are noisily annotated and not temporally localised as well as Kinetics, which provides a big number of temporally localized actions.
 These datasets however are only distributed via YouTube, i.e. each video needs to be downloaded individually.
-At the time of this writing about half of the training-set of Kinetics could be obtained.
-To provide a closed basis for evaluation of our approach, experiments were limited to sampling \textit{temporal order verification} tuples from the source datasets themselves, i.e. UCF-101 and Charades.
+At the time of this writing about half of the training-set of the Kinetics dataset, i.e. around $150,000$ videos were obtained.
+To harvest the advantages of incorporating more data than the target dataset contains, the partially downloaded Kinetics videos were used for pre-training under the assumption that benefits will already be apparent and can be improved by incorporating the full dataset later-on.
 
-Successful pre-training with \textit{temporal order verification} requires providing inputs, which are distinguishable when permuted randomly, as described by \textcite{misra_shuffle_2016}.
-This means in practise for our \textit{C3D} model, that a sampled input clip needs to contain a certain amount of motion, in order to be beneficial for pre-training.
-A video clip with a small magnitude of motion looks nearly the same, when permuted.
+Successful pre-training with \textit{temporal order verification} requires providing inputs, which are clearly distinguishable when permuted randomly as described by \textcite{misra_shuffle_2016}.
+This means in practise for our \textit{C3D} model, that a sampled input clip needs to contain a certain amount of motion in order to be beneficial for pre-training.
+A video clip with only a small magnitude of motion looks nearly the same, when permuted.
+
+We investigate three different methods to transfer the sampling of positive and negative inputs from the original \textit{temporal order verification} approach as illustrated in figure \ref{fig:shufflelearn_approach} to our 3D convolutional network.
+\bigskip
+
+
+\textbf{Method 1}\\
+A regular network input of $16$ frames is sampled from a video as described above.
+The frames are then divided into three similarly sized chunks $a$, $b$ and $c$.
+One of the chunks contains six video frames, which one is determined randomly.
+Figure \ref{tov_sampling1} illustrates the approach with chunk $b$ containing 6 frames.
+
+In order to provide a certain amount of motion in the sampled frames, the mean frames of each chunk are compared.
+The difference between mean frames is used as a measure of change in the 16 frame long clip.
+We empirically determine a threshold to filter out clips with a small amount of motion.
+
+To generate a negative example (\textit{incorrect temporal order}) the order of chunks is being permuted.
+For example: $(b, a, c)$ corresponds to a negative example.
+To generate a positive example (\textit{correct temporal order}) the order of chunks is left unchanged.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{img_approach/tov_sampling}
-    \caption{<+captiontext+>}
-    \label{fig:<+label+>}
-\end{figure}<++>
+    \includegraphics[width=0.8\textwidth]{img_approach/tov_sampling1}
+    \caption{Grouping and permutation of input frames for generating positive and negative examples during pre-training of the \textit{C3D} model.}
+    \label{fig:tov_sampling1}
+\end{figure}
+
+
+\textbf{Method 2}\\
+We hypothesize that the previously described \textit{Method 1} may be flawed, since non-continuous frame transitions, i.e. cuts from permuting the frame chunks only occur at distinct frame regions.
+A network trained to recognize these permutations could therefore overfit to just focus on these regions.
+
+To alleviate this problem, another sampling method that allows cuts between every frame transition has been designed.
+The authors of the original \textit{temporal order verification} approach \cite{misra_shuffle_2016} keep the first and last frame in place and only change the middle frame to generate a negative example in \textit{incorrect temporal order}.
+To incorporate this, a number of frames $a$ in the beginning and end of the input clip is uniformly sampled between $1$ and $3$.
+These frames are kept unchanged, as illustrated in figure \ref{fig:tov_sampling2}.
+
+The remaining middle $16 - 2 \cdot a$ frames are divided into $n$ chunks, where $n$ is uniformly sampled between $2$ and $5$.
+These $n$ chunks are then randomly permuted to create a negative example.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{img_approach/tov_sampling2}
+    \caption{Permutation of input frames to generate a possible cut between every input frame.}
+    \label{fig:tov_sampling2}
+\end{figure}
+
+
+\textbf{Method 3}\\
+A third approach we evaluate is most analogous to the original approach by \textcite{misra_shuffle_2016}.
+Instead of feeding a single permuted clip into a single \textit{C3D} model, three input clips whose temporal relation amongst each other is permuted are fed into a triplet siamese \textit{C3D} model.
+This triplet model is generated by incorporating three \textit{C3D} models with shared weights and no individual output layers.
+The activations of the last fully-connected layers are concatenated and then classified by a final softmax output-layer into the two-classes \textit{correct temporal order} and \textit{incorrect temporal order}.
+
+In total $64$ consecutive frames, i.e. four complete \textit{C3D} inputs are sampled from a training video.
+In figure \ref{fig:tov_sampling3} these four $16$-frame inputs are denoted as $a$, $b$, $c$ and $d$.
+To create a negative example the four individual inputs are left unchanged and their overall order is permuted before being fed in the triplet siamese network.
+
+Specifically, a negative input can be generated by choosing either $(a,d,c)$ or $(b,a,d)$ as input for the network triplet, i.e. the first and last input are again in their correct place.
+Positive inputs can be generated by choosing $(a,b,c)$ or $(b,c,d)$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{img_approach/tov_sampling3}
+    \caption{Pre-training with a triplet Siamese \textit{C3D} model equivalent to \cite{misra_shuffle_2016}}
+    \label{fig:tov_sampling3}
+\end{figure}
