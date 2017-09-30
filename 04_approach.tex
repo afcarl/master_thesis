@@ -120,6 +120,7 @@ The main data-augmentation technique used in our experiments is random cropping 
 
 
 \subsection{Input Pipeline}
+\label{subsec:inputpipeline}
 A single network training step in our multi-GPU setup, i.e. processing an input batch and updating the model parameters as described in section \ref{sec:multi_gpu}, takes longer than preparing a single input batch.
 
 This is due to the following reasons:
@@ -285,6 +286,7 @@ spatially crop consecutive $112 \times 112$ pixel wide regions.
 The batch size of 40 input-clips per step, i.e. 20 inputs per GPU is left unchanged for training on the Charades dataset.
 
 \subsubsection{3D Temporal Order Verification}
+\label{subsubsec:tovmethods}
 Since obtaining the labels \textit{correct temporal order} and \textit{incorrect temporal order} requires no manual data labelling (see \ref{subsec:tov}), \textit{temporal order verification} can be seen as an unsupervised pre-training method.
 Therefore also a large amount of unlabelled data can be used in the pre-training process, as long it contains videos of (preferably human) motion.
 
